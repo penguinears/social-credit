@@ -1,65 +1,247 @@
-body{
-  background:#b30000;
-  color:#ffd700;
-  font-family:"Varela Round";
-  margin:0;
-  overflow:hidden;
+/* ---------- BODY ---------- */
+body {
+  background-color: #D64045; /* red theme */
+  font-family: 'Varela Round', sans-serif;
+  font-weight: 900;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
 }
 
-#title_container{
-  height:140px;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  background:#8b0000;
-  border-bottom:4px solid #ffd700;
+/* ---------- TITLE ---------- */
+#title_container {
+  width: 100%;
+  height: 180px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #8B0000; /* darker red */
+  border-bottom: 4px solid #fff;
+  box-shadow: 0 0 20px -10px #8B0000;
 }
 
-#title{
-  font-family:"Bungee Outline";
-  font-size:48px;
+#title_inner_container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 150px;
 }
 
-#join_container,#chat_container{
-  display:flex;
-  justify-content:center;
-  margin-top:30px;
+#title {
+  color: #FFD700; /* gold/yellow text */
+  font-size: 48px;
+  letter-spacing: 2px;
+  text-align: center;
+  user-select: none;
 }
 
-#join_inner_container,#chat_inner_container{width:420px;}
-
-input{
-  width:100%;
-  padding:10px;
-  text-align:center;
-  border:none;
-  border-bottom:2px dashed #ffd700;
-  background:transparent;
-  color:#ffd700;
+/* ---------- JOIN FORM ---------- */
+#join_container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 50px;
 }
 
-button{
-  margin-top:10px;
-  width:100%;
-  padding:10px;
-  font-weight:bold;
-  background:#ffd700;
-  color:#b30000;
-  cursor:pointer;
+#join_inner_container {
+  width: 90%;
+  max-width: 400px;
 }
 
-#chat_content_container{
-  height:320px;
-  overflow-y:auto;
-  margin-bottom:10px;
+#join_input {
+  width: 100%;
+  height: 45px;
+  padding: 0 10px;
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
+  background-color: rgba(255,255,255,0.1);
+  color: #FFD700;
+  border: 2px dashed #FFD700;
+  border-radius: 8px;
+  outline: none;
 }
 
-.message_container{margin-bottom:10px;}
-
-.vote{
-  cursor:pointer;
-  font-size:18px;
-  margin:0 5px;
+#join_input:focus {
+  box-shadow: 0 0 10px #FFD700;
 }
 
-.score{font-weight:bold;}
+#join_button {
+  width: 100%;
+  height: 45px;
+  margin-top: 15px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #D64045;
+  background-color: #FFD700;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+#join_button.enabled:hover {
+  background-color: #FFC700;
+  transform: scale(1.03);
+}
+
+/* ---------- CHAT ---------- */
+#chat_container {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 30px;
+}
+
+#chat_inner_container {
+  width: 95%;
+  max-width: 500px;
+}
+
+#chat_content_container {
+  width: 100%;
+  height: 400px;
+  overflow-y: auto;
+  padding: 10px;
+  background-color: rgba(0,0,0,0.05);
+  border-radius: 10px;
+  margin-bottom: 10px;
+  scrollbar-width: thin;
+  scrollbar-color: #FFD700 rgba(255,255,255,0.2);
+}
+
+#chat_input_container {
+  display: flex;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+#chat_input {
+  flex: 1;
+  height: 45px;
+  font-size: 16px;
+  padding: 0 10px;
+  border-radius: 8px 0 0 8px;
+  border: none;
+  outline: none;
+  background-color: rgba(255,255,255,0.1);
+  color: #FFD700;
+}
+
+#chat_input_send {
+  width: 60px;
+  height: 45px;
+  border-radius: 0 8px 8px 0;
+  border: none;
+  background-color: #FFD700;
+  color: #D64045;
+  cursor: pointer;
+  font-size: 18px;
+  transition: 0.3s;
+}
+
+#chat_input_send.enabled:hover {
+  background-color: #FFC700;
+}
+
+/* ---------- MESSAGES ---------- */
+.message_container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 15px;
+  padding: 8px;
+  border-radius: 8px;
+  background-color: rgba(255,255,255,0.1);
+  transition: 0.3s;
+}
+
+.message_container:hover {
+  background-color: rgba(255,255,255,0.2);
+}
+
+.message_user {
+  font-weight: bold;
+  font-size: 14px;
+  color: #FFD700;
+}
+
+.message_content {
+  font-size: 14px;
+  color: #fff;
+  margin-top: 4px;
+  word-wrap: break-word;
+}
+
+/* ---------- VOTE BUTTONS ---------- */
+.vote {
+  margin-left: 5px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #FFD700;
+  transition: 0.2s;
+}
+
+.vote:hover {
+  color: #fff;
+  transform: scale(1.2);
+}
+
+/* ---------- SCORE ---------- */
+.score {
+  font-weight: bold;
+  color: #FFD700;
+  margin-right: 3px;
+}
+
+/* ---------- LOGOUT ---------- */
+#chat_logout {
+  color: #FFD700;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+#chat_logout:hover {
+  text-decoration: underline;
+}
+
+/* ---------- MOBILE ---------- */
+@media (max-width: 600px) {
+  #title {
+    font-size: 36px;
+  }
+
+  #chat_content_container {
+    height: 300px;
+  }
+
+  #join_inner_container, #chat_inner_container {
+    width: 95%;
+  }
+
+  #chat_input, #join_input {
+    font-size: 14px;
+  }
+
+  #chat_input_send, #join_button {
+    font-size: 14px;
+    height: 40px;
+  }
+}
+
+/* ---------- SCROLLBAR ---------- */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.1);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #FFD700;
+  border-radius: 5px;
+}
