@@ -1,3 +1,5 @@
+// --- MAIN CLIENT SCRIPT ---
+
 window.onload = function(){
 
   var firebaseConfig = {
@@ -9,7 +11,9 @@ window.onload = function(){
     appId: "1:664078097505:web:f9a4e3211f581d37441e20"
   };
 
-  firebase.initializeApp(firebaseConfig);
+  if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+  }
   var db = firebase.database();
 
   class SOCIAL_CREDIT {
@@ -18,7 +22,12 @@ window.onload = function(){
     showBanner(msg){
       let b = document.getElementById("banner");
 
-      // Color change for cooldown warnings
+      if(!b){
+        b = document.createElement("div");
+        b.id = "banner";
+        document.body.appendChild(b);
+      }
+
       if(msg.includes("10 minutes")){
         b.style.background = "#ff4444";
         b.style.color = "white";
@@ -29,14 +38,12 @@ window.onload = function(){
 
       b.textContent = msg;
 
-      // Shake animation
       b.classList.remove("shake");
-      void b.offsetWidth; 
+      void b.offsetWidth;
       b.classList.add("shake");
 
       b.style.top = "0px";
 
-      // Keep banner visible longer
       setTimeout(()=>{
         b.style.top = "-60px";
       }, 6000);
@@ -69,7 +76,7 @@ window.onload = function(){
       b.onclick=()=>{
         if(i.value.length>0){
           localStorage.setItem("name",i.value);
-          this.chat();
+          this.rooms();
         }
       };
 
@@ -77,6 +84,48 @@ window.onload = function(){
       w.id="join_inner_container";
       w.append(i,b);
       c.append(w);
+      document.body.append(c);
+    }
+
+    rooms(){
+      document.body.innerHTML = "";
+      this.title();
+
+      let c = document.createElement("div");
+      c.id = "join_container";
+
+      let inner = document.createElement("div");
+      inner.id = "join_inner_container";
+
+      let label = document.createElement("div");
+      label.style.marginBottom = "10px";
+      label.textContent = "Choose a room:";
+
+      let select = document.createElement("select");
+      select.id = "room_select";
+      select.style.width = "100%";
+      select.style.padding = "10px";
+      select.style.background = "#8b0000";
+      select.style.color = "#ffd700";
+      select.style.border = "2px solid #ffd700";
+
+      ["General", "Gaming", "Politics", "Memes"].forEach(r=>{
+        let opt = document.createElement("option");
+        opt.value = r;
+        opt.textContent = r;
+        select.append(opt);
+      });
+
+      let btn = document.createElement("button");
+      btn.textContent = "Enter Room";
+
+      btn.onclick = () => {
+        localStorage.setItem("room", select.value);
+        this.chat();
+      };
+
+      inner.append(label, select, btn);
+      c.append(inner);
       document.body.append(c);
     }
 
@@ -89,6 +138,11 @@ window.onload = function(){
       let inner=document.createElement("div");
       inner.id="chat_inner_container";
 
+      let roomInfo = document.createElement("div");
+      roomInfo.style.textAlign = "center";
+      roomInfo.style.marginBottom = "10px";
+      roomInfo.textContent = "Room: " + (localStorage.getItem("room") || "Unknown");
+
       let box=document.createElement("div");
       box.id="chat_content_container";
 
@@ -100,7 +154,12 @@ window.onload = function(){
 
       send.onclick=()=>{
         if(input.value.length>0){
-          db.ref("chats").push({
+          let room = localStorage.getItem("room");
+          if(!room){
+            this.showBanner("No room selected.");
+            return;
+          }
+          db.ref("rooms/"+room+"/chats").push({
             name:this.get_name(),
             message:input.value,
             time:Date.now()
@@ -109,7 +168,7 @@ window.onload = function(){
         }
       };
 
-      inner.append(box,input,send);
+      inner.append(roomInfo, box, input, send);
       c.append(inner);
       document.body.append(c);
 
@@ -121,68 +180,84 @@ window.onload = function(){
     }
 
     listen(){
+      let room = localStorage.getItem("room");
       let box=document.getElementById("chat_content_container");
-      db.ref("chats").orderByChild("time").on("value",snap=>{
-        box.innerHTML="";
-        snap.forEach(s=>{
-          let d=s.val();
 
-          let row=document.createElement("div");
-          row.className="message_container";
+      if(!room){
+        box.innerHTML = "No room selected.";
+        return;
+      }
 
-          let name=document.createElement("span");
-          name.textContent=d.name+" ";
+      db.ref("rooms/"+room+"/chats")
+        .orderByChild("time")
+        .on("value",snap=>{
+          box.innerHTML="";
+          snap.forEach(s=>{
+            let d=s.val();
 
-          let scoreSpan=document.createElement("span");
-          scoreSpan.className="score";
+            let row=document.createElement("div");
+            row.className="message_container";
 
-          let up=document.createElement("span");
-          up.textContent="▲";
-          up.className="vote";
+            let name=document.createElement("span");
+            name.textContent=d.name+" ";
 
-          let down=document.createElement("span");
-          down.textContent="▼";
-          down.className="vote";
+            let scoreSpan=document.createElement("span");
+            scoreSpan.className="score";
 
-          let scoreRef=db.ref("scores/"+d.name);
+            let up=document.createElement("span");
+            up.textContent="▲";
+            up.className="vote";
 
-          scoreRef.once("value",v=>{
-            if(!v.exists()) scoreRef.set({score:30});
-            scoreSpan.textContent=(v.val()?v.val().score:30)+" ";
+            let down=document.createElement("span");
+            down.textContent="▼";
+            down.className="vote";
+
+            let scoreRef=db.ref("rooms/"+room+"/scores/"+d.name);
+
+            scoreRef.once("value",v=>{
+              if(!v.exists()) scoreRef.set({score:30});
+              scoreSpan.textContent=(v.val()?v.val().score:30)+" ";
+            });
+
+            up.onclick=()=>this.vote(d.name,1);
+            down.onclick=()=>this.vote(d.name,-1);
+
+            let msg=document.createElement("div");
+            msg.textContent=d.message;
+
+            if(d.name === "SYSTEM"){
+              name.classList.add("system-name");
+              msg.classList.add("system-msg");
+            }
+
+            row.append(name,scoreSpan,up,down,msg);
+            box.append(row);
           });
 
-          up.onclick=()=>this.vote(d.name,1);
-          down.onclick=()=>this.vote(d.name,-1);
-
-          let msg=document.createElement("div");
-          msg.textContent=d.message;
-
-          // SYSTEM message styling
-          if(d.name === "SYSTEM"){
-            name.classList.add("system-name");
-            msg.classList.add("system-msg");
-          }
-
-          row.append(name,scoreSpan,up,down,msg);
-          box.append(row);
+          box.scrollTop = box.scrollHeight;
         });
-      });
     }
 
     vote(target,delta){
       let voter=this.get_name();
+      let room = localStorage.getItem("room");
       let now=Date.now();
-      let ref=db.ref("votes/"+target+"/"+voter);
+
+      if(!room){
+        this.showBanner("No room selected.");
+        return;
+      }
+
+      let ref=db.ref("rooms/"+room+"/votes/"+target+"/"+voter);
 
       ref.once("value",s=>{
 
-        // 10 minutes = 600000 ms
         if(s.exists() && now - s.val() < 600000){
           this.showBanner("You can only vote every 10 minutes.");
           return;
         }
 
-        let scoreRef=db.ref("scores/"+target);
+        let scoreRef=db.ref("rooms/"+room+"/scores/"+target);
         scoreRef.transaction(c=>{
           if(!c) c={score:30};
           c.score+=delta;
@@ -191,8 +266,7 @@ window.onload = function(){
 
         ref.set(now);
 
-        // SYSTEM message
-        db.ref("chats").push({
+        db.ref("rooms/"+room+"/chats").push({
           name:"SYSTEM",
           message: voter + " voted " + target + (delta > 0 ? " ↑" : " ↓"),
           time:Date.now()
@@ -204,6 +278,10 @@ window.onload = function(){
   }
 
   let app=new SOCIAL_CREDIT();
-  if(app.get_name()) app.chat();
-  else app.home();
-}
+  if(app.get_name()){
+    if(localStorage.getItem("room")) app.chat();
+    else app.rooms();
+  } else {
+    app.home();
+  }
+};
