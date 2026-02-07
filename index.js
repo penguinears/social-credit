@@ -14,6 +14,17 @@ window.onload = function(){
 
   class SOCIAL_CREDIT {
 
+    /* NEW: Banner function */
+    showBanner(msg){
+      let b = document.getElementById("banner");
+      b.textContent = msg;
+      b.style.top = "0px";
+
+      setTimeout(()=>{
+        b.style.top = "-60px";
+      }, 3000);
+    }
+
     home(){
       document.body.innerHTML="";
       this.title();
@@ -129,6 +140,12 @@ window.onload = function(){
           let msg=document.createElement("div");
           msg.textContent=d.message;
 
+          /* SYSTEM message styling */
+          if(d.name === "SYSTEM"){
+            name.classList.add("system-name");
+            msg.classList.add("system-msg");
+          }
+
           row.append(name,scoreSpan,up,down,msg);
           box.append(row);
         });
@@ -141,8 +158,10 @@ window.onload = function(){
       let ref=db.ref("votes/"+target+"/"+voter);
 
       ref.once("value",s=>{
-        if(s.exists() && now-s.val()<3600000){
-          alert("You can only rate once per hour.");
+
+        // 10 minutes = 600000 ms
+        if(s.exists() && now - s.val() < 600000){
+          this.showBanner("You can only vote every 10 minutes.");
           return;
         }
 
@@ -154,6 +173,15 @@ window.onload = function(){
         });
 
         ref.set(now);
+
+        // Add SYSTEM message to chat
+        db.ref("chats").push({
+          name:"SYSTEM",
+          message: voter + " voted " + target + (delta > 0 ? " ↑" : " ↓"),
+          time:Date.now()
+        });
+
+        this.showBanner("Vote recorded!");
       });
     }
   }
