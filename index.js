@@ -21,26 +21,38 @@ window.onload = function(){
     /* TAG DEFINITIONS */
     getAllTags(){
       return [
-        { name: "Untrustable",     min: 15 },
-        { name: "Unpopular",       min: 20 },
-        { name: "Chud",            min: 28 },
-        { name: "Mogger",          min: 35 },
-        { name: "Cool",            min: 37 },
-        { name: "Popular",         min: 40 },
-        { name: "Trustworthy Guy", min: 45 },
-        { name: "Warlord",         min: 60 },
-        { name: "Supreme Leader",  min: 100 }
+        { name: "Untrusty",        min: 15, direction: "down" },
+        { name: "Unpopular",       min: 20, direction: "down" },
+        { name: "Chud",            min: 28, direction: "down" },
+
+        { name: "Mogger",          min: 35, direction: "up" },
+        { name: "Cool",            min: 37, direction: "up" },
+        { name: "Popular",         min: 40, direction: "up" },
+        { name: "Trustworthy Guy", min: 45, direction: "up" },
+        { name: "Warlord",         min: 60, direction: "up" },
+        { name: "Supreme Leader",  min: 100, direction: "up" }
       ];
     }
 
+    /* EXACT MILESTONE UNLOCK LOGIC */
+    hasUnlockedTag(score, tag){
+      if(tag.direction === "down"){
+        return score <= tag.min;
+      }
+      if(tag.direction === "up"){
+        return score >= tag.min;
+      }
+      return false;
+    }
+
     getUnlockedTags(score){
-      return this.getAllTags().filter(t => score >= t.min);
+      return this.getAllTags().filter(t => this.hasUnlockedTag(score, t));
     }
 
     getDefaultTag(score){
       let unlocked = this.getUnlockedTags(score);
       if(unlocked.length === 0) return "";
-      return unlocked[unlocked.length - 1].name; // highest unlocked
+      return unlocked[unlocked.length - 1].name;
     }
 
     /* BANNER SYSTEM */
@@ -53,7 +65,6 @@ window.onload = function(){
         document.body.appendChild(b);
       }
 
-      // rougher look
       b.style.position = "fixed";
       b.style.left = "0";
       b.style.top = "-60px";
@@ -296,8 +307,8 @@ window.onload = function(){
             row.style.marginBottom = "4px";
 
             let left = document.createElement("span");
-            let isUnlocked = score >= t.min;
-            left.textContent = t.name + " (≥"+t.min+")" + (isUnlocked ? "" : " [LOCKED]");
+            let isUnlocked = this.hasUnlockedTag(score, t);
+            left.textContent = t.name + " (milestone: "+t.min+")" + (isUnlocked ? "" : " [LOCKED]");
             left.style.color = isUnlocked ? "#ffd700" : "#aa5555";
 
             let btn = document.createElement("button");
