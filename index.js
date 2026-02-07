@@ -14,15 +14,32 @@ window.onload = function(){
 
   class SOCIAL_CREDIT {
 
-    /* NEW: Banner function */
+    /* BANNER SYSTEM */
     showBanner(msg){
       let b = document.getElementById("banner");
+
+      // Color change for cooldown warnings
+      if(msg.includes("10 minutes")){
+        b.style.background = "#ff4444";
+        b.style.color = "white";
+      } else {
+        b.style.background = "#ffd700";
+        b.style.color = "#b30000";
+      }
+
       b.textContent = msg;
+
+      // Shake animation
+      b.classList.remove("shake");
+      void b.offsetWidth; 
+      b.classList.add("shake");
+
       b.style.top = "0px";
 
+      // Keep banner visible longer
       setTimeout(()=>{
         b.style.top = "-60px";
-      }, 3000);
+      }, 6000);
     }
 
     home(){
@@ -140,7 +157,7 @@ window.onload = function(){
           let msg=document.createElement("div");
           msg.textContent=d.message;
 
-          /* SYSTEM message styling */
+          // SYSTEM message styling
           if(d.name === "SYSTEM"){
             name.classList.add("system-name");
             msg.classList.add("system-msg");
@@ -174,7 +191,7 @@ window.onload = function(){
 
         ref.set(now);
 
-        // Add SYSTEM message to chat
+        // SYSTEM message
         db.ref("chats").push({
           name:"SYSTEM",
           message: voter + " voted " + target + (delta > 0 ? " ↑" : " ↓"),
