@@ -18,7 +18,7 @@ window.onload = function(){
 
   class SOCIAL_CREDIT {
 
-    /* TAG DEFINITIONS */
+    /* TAG DEFINITIONS (GLOBAL SCORE) */
     getAllTags(){
       return [
         { name: "Untrusty",        min: 15, direction: "down" },
@@ -34,7 +34,6 @@ window.onload = function(){
       ];
     }
 
-    /* EXACT MILESTONE UNLOCK LOGIC */
     hasUnlockedTag(score, tag){
       if(tag.direction === "down"){
         return score <= tag.min;
@@ -53,6 +52,38 @@ window.onload = function(){
       let unlocked = this.getUnlockedTags(score);
       if(unlocked.length === 0) return "";
       return unlocked[unlocked.length - 1].name;
+    }
+
+    /* SWEAR FILTER */
+    getBannedWords(){
+      // You can extend this with your own list.
+      return [
+        "cunt" // plus any racist / homophobic slurs you add yourself
+      ];
+    }
+
+    containsBannedWord(text){
+      if(!text) return false;
+      const lower = text.toLowerCase();
+      const banned = this.getBannedWords();
+      return banned.some(w => lower.includes(w));
+    }
+
+    /* GLOBAL SCORE HELPERS */
+    getGlobalScoreRef(name){
+      return db.ref("scores/" + name);
+    }
+
+    adjustScore(name, delta, callback){
+      let ref = this.getGlobalScoreRef(name);
+      ref.transaction(c => {
+        if(!c) c = { score: 30 };
+        c.score += delta;
+        if(c.score < 0) c.score = 0;
+        return c;
+      }, (err, committed, snap) => {
+        if(callback) callback(snap && snap.val() ? snap.val().score : 0);
+      });
     }
 
     /* BANNER SYSTEM */
@@ -131,7 +162,7 @@ window.onload = function(){
         if(i.value.length>0){
           localStorage.setItem("name",i.value);
           localStorage.setItem("room","General");
-          this.chat();
+          this.ensureGlobalScore(i.value, () => this.chat());
         }
       };
 
@@ -142,15 +173,42 @@ window.onload = function(){
       document.body.append(c);
     }
 
-    getRoomsList(){
-      return ["General", "Conspiracy Theories", "Politics", "Gaming", "Debate"];
+    ensureGlobalScore(name, cb){
+      let ref = this.getGlobalScoreRef(name);
+      ref.once("value", v => {
+        if(!v.exists()){
+          ref.set({ score: 30 }, cb);
+        } else {
+          cb();
+        }
+      });
+    }
+
+    /* ROOMS (INCL. USER-CREATED) */
+    getRoomsRef(){
+      return db.ref("rooms");
+    }
+
+    loadRooms(callback){
+      this.getRoomsRef().once("value", snap => {
+        let rooms = [];
+        if(snap.exists()){
+          snap.forEach(child => {
+            rooms.push(child.key);
+          });
+        }
+        if(rooms.length === 0){
+          rooms = ["General","Conspiracy Theories","Politics","Gaming","Debate"];
+          rooms.forEach(r => this.getRoomsRef().child(r).set({ created: Date.now() }));
+        }
+        callback(rooms);
+      });
     }
 
     chat(){
       document.body.innerHTML="";
       this.title();
 
-      // top controls: room switcher + ME button
       let controls = document.createElement("div");
       controls.style.display = "flex";
       controls.style.justifyContent = "space-between";
@@ -158,7 +216,6 @@ window.onload = function(){
       controls.style.margin = "10px auto";
       controls.style.width = "420px";
 
-      // room switcher
       let roomWrap = document.createElement("div");
       roomWrap.style.display = "flex";
       roomWrap.style.alignItems = "center";
@@ -175,23 +232,13 @@ window.onload = function(){
       roomSelect.style.border = "2px solid #ffd700";
       roomSelect.style.fontFamily = "Varela Round, sans-serif";
 
-      let currentRoom = localStorage.getItem("room") || "General";
-      this.getRoomsList().forEach(r=>{
-        let opt = document.createElement("option");
-        opt.value = r;
-        opt.textContent = r;
-        if(r === currentRoom) opt.selected = true;
-        roomSelect.append(opt);
-      });
+      let createBtn = document.createElement("button");
+      createBtn.textContent = "Create Room";
+      createBtn.style.marginLeft = "8px";
+      createBtn.style.marginTop = "0";
 
-      roomSelect.onchange = () => {
-        localStorage.setItem("room", roomSelect.value);
-        this.chat();
-      };
+      roomWrap.append(roomLabel, roomSelect, createBtn);
 
-      roomWrap.append(roomLabel, roomSelect);
-
-      // ME button (top-right)
       let meBtn = document.createElement("button");
       meBtn.textContent = "ME";
       meBtn.style.width = "80px";
@@ -215,23 +262,137 @@ window.onload = function(){
       let send=document.createElement("button");
       send.textContent="Send";
 
-      send.onclick=()=>{
-        if(input.value.length>0){
-          let room = localStorage.getItem("room") || "General";
-          db.ref("rooms/"+room+"/chats").push({
-            name:this.get_name(),
-            message:input.value,
-            time:Date.now()
-          });
-          input.value="";
-        }
-      };
-
       inner.append(box,input,send);
       c.append(inner);
       document.body.append(c);
 
-      this.listen();
+      this.loadRooms(rooms => {
+        let currentRoom = localStorage.getItem("room") || "General";
+        roomSelect.innerHTML = "";
+        rooms.forEach(r=>{
+          let opt = document.createElement("option");
+          opt.value = r;
+          opt.textContent = r;
+          if(r === currentRoom) opt.selected = true;
+          roomSelect.append(opt);
+        });
+
+        roomSelect.onchange = () => {
+          localStorage.setItem("room", roomSelect.value);
+          this.chat();
+        };
+
+        createBtn.onclick = () => this.createRoomPrompt();
+
+        this.setupChatControls(input, send);
+        this.listen();
+      });
+    }
+
+    createRoomPrompt(){
+      let name = prompt("Enter new room name:");
+      if(!name) return;
+
+      name = name.trim();
+      if(name.length < 2){
+        this.showBanner("Room name too short.");
+        return;
+      }
+
+      if(this.containsBannedWord(name)){
+        let user = this.get_name();
+        let room = localStorage.getItem("room") || "General";
+        this.adjustScore(user, -3, newScore => {
+          db.ref("rooms/"+room+"/chats").push({
+            name: "SYSTEM",
+            message: user + " tried to create a bad room name and lost 3 social credit.",
+            time: Date.now()
+          });
+          this.showBanner("Room name not allowed. -3 social credit.");
+          if(newScore <= 0){
+            this.showBanner("Your social credit is too low to participate.");
+          }
+        });
+        return;
+      }
+
+      let user = this.get_name();
+      this.getGlobalScoreRef(user).once("value", v => {
+        let score = v.val() ? v.val().score : 30;
+        if(score <= 0){
+          this.showBanner("Your social credit is too low to create rooms.");
+          return;
+        }
+
+        let ref = this.getRoomsRef().child(name);
+        ref.once("value", snap => {
+          if(snap.exists()){
+            this.showBanner("Room already exists.");
+          } else {
+            ref.set({ created: Date.now() }, () => {
+              localStorage.setItem("room", name);
+              this.chat();
+            });
+          }
+        });
+      });
+    }
+
+    setupChatControls(input, send){
+      let user = this.get_name();
+      this.getGlobalScoreRef(user).once("value", v => {
+        let score = v.val() ? v.val().score : 30;
+        if(score <= 0){
+          input.disabled = true;
+          send.disabled = true;
+          this.showBanner("Your social credit is too low to participate.");
+        } else {
+          input.disabled = false;
+          send.disabled = false;
+        }
+      });
+
+      send.onclick = () => {
+        let room = localStorage.getItem("room") || "General";
+        let name = this.get_name();
+        if(!name) return;
+
+        this.getGlobalScoreRef(name).once("value", v => {
+          let score = v.val() ? v.val().score : 30;
+          if(score <= 0){
+            this.showBanner("Your social credit is too low to participate.");
+            return;
+          }
+
+          let text = input.value.trim();
+          if(text.length === 0) return;
+
+          if(this.containsBannedWord(text)){
+            this.adjustScore(name, -3, newScore => {
+              db.ref("rooms/"+room+"/chats").push({
+                name: "SYSTEM",
+                message: name + " used banned language and lost 3 social credit.",
+                time: Date.now()
+              });
+              this.showBanner("Banned language detected. -3 social credit.");
+              if(newScore <= 0){
+                this.showBanner("Your social credit is too low to participate.");
+                input.disabled = true;
+                send.disabled = true;
+              }
+            });
+            input.value = "";
+            return;
+          }
+
+          db.ref("rooms/"+room+"/chats").push({
+            name: name,
+            message: text,
+            time: Date.now()
+          });
+          input.value = "";
+        });
+      };
     }
 
     get_name(){
@@ -263,7 +424,7 @@ window.onload = function(){
       panel.style.zIndex = "9999";
 
       let title = document.createElement("div");
-      title.textContent = "Your Titles ("+room+")";
+      title.textContent = "Your Titles (Global)";
       title.style.fontWeight = "bold";
       title.style.marginBottom = "6px";
 
@@ -283,12 +444,11 @@ window.onload = function(){
       panel.append(title, close, list);
       document.body.append(panel);
 
-      let scoreRef = db.ref("rooms/"+room+"/scores/"+name);
-      let tagRef   = db.ref("rooms/"+room+"/tags/"+name);
+      let scoreRef = this.getGlobalScoreRef(name);
+      let tagRef   = db.ref("tags/"+name);
 
       scoreRef.once("value", v=>{
         let score = v.val() ? v.val().score : 30;
-        let unlocked = this.getUnlockedTags(score);
 
         tagRef.once("value", tv=>{
           let equipped = tv.val() || "";
@@ -356,8 +516,8 @@ window.onload = function(){
             let row=document.createElement("div");
             row.className="message_container";
 
-            let name=document.createElement("span");
-            name.textContent=d.name+" ";
+            let nameSpan=document.createElement("span");
+            nameSpan.textContent=d.name+" ";
 
             let scoreSpan=document.createElement("span");
             scoreSpan.className="score";
@@ -376,33 +536,36 @@ window.onload = function(){
             tagSpan.style.color = "#ccaa33";
             tagSpan.style.fontStyle = "italic";
 
-            let scoreRef=db.ref("rooms/"+room+"/scores/"+d.name);
-            let tagRef  =db.ref("rooms/"+room+"/tags/"+d.name);
-
-            scoreRef.once("value",v=>{
-              let scoreVal = v.val() ? v.val().score : 30;
-              if(!v.exists()) scoreRef.set({score:30});
-              scoreSpan.textContent = scoreVal + " ";
-
-              tagRef.once("value", tv=>{
-                let equipped = tv.val();
-                let tagToShow = equipped || this.getDefaultTag(scoreVal);
-                tagSpan.textContent = tagToShow ? "["+tagToShow+"]" : "";
-              });
-            });
-
-            up.onclick=()=>this.vote(d.name,1);
-            down.onclick=()=>this.vote(d.name,-1);
-
             let msg=document.createElement("div");
             msg.textContent=d.message;
 
             if(d.name === "SYSTEM"){
-              name.classList.add("system-name");
+              nameSpan.classList.add("system-name");
               msg.classList.add("system-msg");
+              up.style.display = "none";
+              down.style.display = "none";
+              scoreSpan.style.display = "none";
+              tagSpan.style.display = "none";
+            } else {
+              let scoreRef = this.getGlobalScoreRef(d.name);
+              let tagRef   = db.ref("tags/"+d.name);
+
+              scoreRef.once("value", v=>{
+                let scoreVal = v.val() ? v.val().score : 30;
+                scoreSpan.textContent = scoreVal + " ";
+
+                tagRef.once("value", tv=>{
+                  let equipped = tv.val();
+                  let tagToShow = equipped || this.getDefaultTag(scoreVal);
+                  tagSpan.textContent = tagToShow ? "["+tagToShow+"]" : "";
+                });
+              });
+
+              up.onclick=()=>this.vote(d.name,1);
+              down.onclick=()=>this.vote(d.name,-1);
             }
 
-            row.append(name,scoreSpan,up,down,tagSpan,msg);
+            row.append(nameSpan,scoreSpan,up,down,tagSpan,msg);
             box.append(row);
           });
 
@@ -415,39 +578,46 @@ window.onload = function(){
       let room = localStorage.getItem("room") || "General";
       let now=Date.now();
 
-      let ref=db.ref("rooms/"+room+"/votes/"+target+"/"+voter);
+      if(!voter || voter === target) return;
 
-      ref.once("value",s=>{
-
-        if(s.exists() && now - s.val() < 600000){
-          this.showBanner("You can only vote every 10 minutes.");
+      this.getGlobalScoreRef(voter).once("value", v => {
+        let voterScore = v.val() ? v.val().score : 30;
+        if(voterScore <= 0){
+          this.showBanner("Your social credit is too low to participate.");
           return;
         }
 
-        let scoreRef=db.ref("rooms/"+room+"/scores/"+target);
-        scoreRef.transaction(c=>{
-          if(!c) c={score:30};
-          c.score+=delta;
-          return c;
+        let ref=db.ref("votes/"+target+"/"+voter);
+
+        ref.once("value",s=>{
+
+          if(s.exists() && now - s.val() < 600000){
+            this.showBanner("You can only vote every 10 minutes.");
+            return;
+          }
+
+          this.adjustScore(target, delta, () => {});
+
+          ref.set(now);
+
+          db.ref("rooms/"+room+"/chats").push({
+            name:"SYSTEM",
+            message: voter + " voted " + target + (delta > 0 ? " ↑" : " ↓"),
+            time:Date.now()
+          });
+
+          this.showBanner("Vote recorded!");
         });
-
-        ref.set(now);
-
-        db.ref("rooms/"+room+"/chats").push({
-          name:"SYSTEM",
-          message: voter + " voted " + target + (delta > 0 ? " ↑" : " ↓"),
-          time:Date.now()
-        });
-
-        this.showBanner("Vote recorded!");
       });
     }
   }
 
   let app=new SOCIAL_CREDIT();
   if(app.get_name()){
-    if(!localStorage.getItem("room")) localStorage.setItem("room","General");
-    app.chat();
+    app.ensureGlobalScore(app.get_name(), () => {
+      if(!localStorage.getItem("room")) localStorage.setItem("room","General");
+      app.chat();
+    });
   } else {
     app.home();
   }
