@@ -18,6 +18,31 @@ window.onload = function(){
 
   class SOCIAL_CREDIT {
 
+    /* TAG DEFINITIONS */
+    getAllTags(){
+      return [
+        { name: "Untrustable",     min: 15 },
+        { name: "Unpopular",       min: 20 },
+        { name: "Chud",            min: 28 },
+        { name: "Mogger",          min: 35 },
+        { name: "Cool",            min: 37 },
+        { name: "Popular",         min: 40 },
+        { name: "Trustworthy Guy", min: 45 },
+        { name: "Warlord",         min: 60 },
+        { name: "Supreme Leader",  min: 100 }
+      ];
+    }
+
+    getUnlockedTags(score){
+      return this.getAllTags().filter(t => score >= t.min);
+    }
+
+    getDefaultTag(score){
+      let unlocked = this.getUnlockedTags(score);
+      if(unlocked.length === 0) return "";
+      return unlocked[unlocked.length - 1].name; // highest unlocked
+    }
+
     /* BANNER SYSTEM */
     showBanner(msg){
       let b = document.getElementById("banner");
@@ -28,9 +53,24 @@ window.onload = function(){
         document.body.appendChild(b);
       }
 
+      // rougher look
+      b.style.position = "fixed";
+      b.style.left = "0";
+      b.style.top = "-60px";
+      b.style.width = "100%";
+      b.style.padding = "15px";
+      b.style.fontWeight = "bold";
+      b.style.fontFamily = "Varela Round, sans-serif";
+      b.style.textAlign = "center";
+      b.style.transition = "top 0.2s ease";
+      b.style.borderBottom = "4px solid #000";
+      b.style.borderRadius = "0";
+      b.style.letterSpacing = "1px";
+      b.style.textTransform = "uppercase";
+
       if(msg.includes("10 minutes")){
-        b.style.background = "#ff4444";
-        b.style.color = "white";
+        b.style.background = "#ff2222";
+        b.style.color = "#ffffff";
       } else {
         b.style.background = "#ffd700";
         b.style.color = "#b30000";
@@ -66,6 +106,9 @@ window.onload = function(){
     }
 
     join(){
+      document.body.innerHTML = "";
+      this.title();
+
       let c=document.createElement("div");
       c.id="join_container";
       let i=document.createElement("input");
@@ -76,7 +119,8 @@ window.onload = function(){
       b.onclick=()=>{
         if(i.value.length>0){
           localStorage.setItem("name",i.value);
-          this.rooms();
+          localStorage.setItem("room","General");
+          this.chat();
         }
       };
 
@@ -87,61 +131,69 @@ window.onload = function(){
       document.body.append(c);
     }
 
-    rooms(){
-      document.body.innerHTML = "";
-      this.title();
-
-      let c = document.createElement("div");
-      c.id = "join_container";
-
-      let inner = document.createElement("div");
-      inner.id = "join_inner_container";
-
-      let label = document.createElement("div");
-      label.style.marginBottom = "10px";
-      label.textContent = "Choose a room:";
-
-      let select = document.createElement("select");
-      select.id = "room_select";
-      select.style.width = "100%";
-      select.style.padding = "10px";
-      select.style.background = "#8b0000";
-      select.style.color = "#ffd700";
-      select.style.border = "2px solid #ffd700";
-
-      ["General", "Gaming", "Politics", "Memes"].forEach(r=>{
-        let opt = document.createElement("option");
-        opt.value = r;
-        opt.textContent = r;
-        select.append(opt);
-      });
-
-      let btn = document.createElement("button");
-      btn.textContent = "Enter Room";
-
-      btn.onclick = () => {
-        localStorage.setItem("room", select.value);
-        this.chat();
-      };
-
-      inner.append(label, select, btn);
-      c.append(inner);
-      document.body.append(c);
+    getRoomsList(){
+      return ["General", "Conspiracy Theories", "Politics", "Gaming", "Debate"];
     }
 
     chat(){
       document.body.innerHTML="";
       this.title();
 
+      // top controls: room switcher + ME button
+      let controls = document.createElement("div");
+      controls.style.display = "flex";
+      controls.style.justifyContent = "space-between";
+      controls.style.alignItems = "center";
+      controls.style.margin = "10px auto";
+      controls.style.width = "420px";
+
+      // room switcher
+      let roomWrap = document.createElement("div");
+      roomWrap.style.display = "flex";
+      roomWrap.style.alignItems = "center";
+      roomWrap.style.gap = "6px";
+
+      let roomLabel = document.createElement("span");
+      roomLabel.textContent = "Room:";
+      roomLabel.style.color = "#ffd700";
+
+      let roomSelect = document.createElement("select");
+      roomSelect.style.padding = "6px";
+      roomSelect.style.background = "#8b0000";
+      roomSelect.style.color = "#ffd700";
+      roomSelect.style.border = "2px solid #ffd700";
+      roomSelect.style.fontFamily = "Varela Round, sans-serif";
+
+      let currentRoom = localStorage.getItem("room") || "General";
+      this.getRoomsList().forEach(r=>{
+        let opt = document.createElement("option");
+        opt.value = r;
+        opt.textContent = r;
+        if(r === currentRoom) opt.selected = true;
+        roomSelect.append(opt);
+      });
+
+      roomSelect.onchange = () => {
+        localStorage.setItem("room", roomSelect.value);
+        this.chat();
+      };
+
+      roomWrap.append(roomLabel, roomSelect);
+
+      // ME button (top-right)
+      let meBtn = document.createElement("button");
+      meBtn.textContent = "ME";
+      meBtn.style.width = "80px";
+      meBtn.style.marginTop = "0";
+      meBtn.onclick = () => this.showMePanel();
+
+      controls.append(roomWrap, meBtn);
+      document.body.append(controls);
+
       let c=document.createElement("div");
       c.id="chat_container";
       let inner=document.createElement("div");
       inner.id="chat_inner_container";
-
-      let roomInfo = document.createElement("div");
-      roomInfo.style.textAlign = "center";
-      roomInfo.style.marginBottom = "10px";
-      roomInfo.textContent = "Room: " + (localStorage.getItem("room") || "Unknown");
 
       let box=document.createElement("div");
       box.id="chat_content_container";
@@ -154,11 +206,7 @@ window.onload = function(){
 
       send.onclick=()=>{
         if(input.value.length>0){
-          let room = localStorage.getItem("room");
-          if(!room){
-            this.showBanner("No room selected.");
-            return;
-          }
+          let room = localStorage.getItem("room") || "General";
           db.ref("rooms/"+room+"/chats").push({
             name:this.get_name(),
             message:input.value,
@@ -168,7 +216,7 @@ window.onload = function(){
         }
       };
 
-      inner.append(roomInfo, box, input, send);
+      inner.append(box,input,send);
       c.append(inner);
       document.body.append(c);
 
@@ -179,14 +227,113 @@ window.onload = function(){
       return localStorage.getItem("name");
     }
 
-    listen(){
-      let room = localStorage.getItem("room");
-      let box=document.getElementById("chat_content_container");
+    showMePanel(){
+      let existing = document.getElementById("me_panel");
+      if(existing) existing.remove();
 
-      if(!room){
-        box.innerHTML = "No room selected.";
+      let room = localStorage.getItem("room") || "General";
+      let name = this.get_name();
+      if(!name){
+        this.showBanner("No username set.");
         return;
       }
+
+      let panel = document.createElement("div");
+      panel.id = "me_panel";
+      panel.style.position = "fixed";
+      panel.style.top = "70px";
+      panel.style.right = "10px";
+      panel.style.width = "260px";
+      panel.style.background = "#330000";
+      panel.style.border = "3px solid #ffd700";
+      panel.style.padding = "10px";
+      panel.style.color = "#ffd700";
+      panel.style.fontFamily = "Varela Round, sans-serif";
+      panel.style.zIndex = "9999";
+
+      let title = document.createElement("div");
+      title.textContent = "Your Titles ("+room+")";
+      title.style.fontWeight = "bold";
+      title.style.marginBottom = "6px";
+
+      let close = document.createElement("div");
+      close.textContent = "X";
+      close.style.position = "absolute";
+      close.style.top = "4px";
+      close.style.right = "6px";
+      close.style.cursor = "pointer";
+      close.onclick = ()=>panel.remove();
+
+      let list = document.createElement("div");
+      list.style.maxHeight = "200px";
+      list.style.overflowY = "auto";
+      list.style.fontSize = "13px";
+
+      panel.append(title, close, list);
+      document.body.append(panel);
+
+      let scoreRef = db.ref("rooms/"+room+"/scores/"+name);
+      let tagRef   = db.ref("rooms/"+room+"/tags/"+name);
+
+      scoreRef.once("value", v=>{
+        let score = v.val() ? v.val().score : 30;
+        let unlocked = this.getUnlockedTags(score);
+
+        tagRef.once("value", tv=>{
+          let equipped = tv.val() || "";
+
+          let scoreLine = document.createElement("div");
+          scoreLine.textContent = "Score: "+score;
+          scoreLine.style.marginBottom = "6px";
+          list.append(scoreLine);
+
+          let all = this.getAllTags();
+          all.forEach(t=>{
+            let row = document.createElement("div");
+            row.style.display = "flex";
+            row.style.justifyContent = "space-between";
+            row.style.alignItems = "center";
+            row.style.marginBottom = "4px";
+
+            let left = document.createElement("span");
+            let isUnlocked = score >= t.min;
+            left.textContent = t.name + " (≥"+t.min+")" + (isUnlocked ? "" : " [LOCKED]");
+            left.style.color = isUnlocked ? "#ffd700" : "#aa5555";
+
+            let btn = document.createElement("button");
+            btn.style.padding = "2px 6px";
+            btn.style.fontSize = "11px";
+            btn.style.marginTop = "0";
+
+            if(!isUnlocked){
+              btn.textContent = "Locked";
+              btn.disabled = true;
+            } else if(equipped === t.name){
+              btn.textContent = "Unequip";
+              btn.onclick = ()=>{
+                tagRef.remove();
+                this.showBanner("Unequipped "+t.name);
+                panel.remove();
+              };
+            } else {
+              btn.textContent = "Equip";
+              btn.onclick = ()=>{
+                tagRef.set(t.name);
+                this.showBanner("Equipped "+t.name);
+                panel.remove();
+              };
+            }
+
+            row.append(left, btn);
+            list.append(row);
+          });
+        });
+      });
+    }
+
+    listen(){
+      let room = localStorage.getItem("room") || "General";
+      let box=document.getElementById("chat_content_container");
 
       db.ref("rooms/"+room+"/chats")
         .orderByChild("time")
@@ -212,11 +359,25 @@ window.onload = function(){
             down.textContent="▼";
             down.className="vote";
 
+            let tagSpan=document.createElement("span");
+            tagSpan.className="tag";
+            tagSpan.style.marginLeft = "4px";
+            tagSpan.style.color = "#ccaa33";
+            tagSpan.style.fontStyle = "italic";
+
             let scoreRef=db.ref("rooms/"+room+"/scores/"+d.name);
+            let tagRef  =db.ref("rooms/"+room+"/tags/"+d.name);
 
             scoreRef.once("value",v=>{
+              let scoreVal = v.val() ? v.val().score : 30;
               if(!v.exists()) scoreRef.set({score:30});
-              scoreSpan.textContent=(v.val()?v.val().score:30)+" ";
+              scoreSpan.textContent = scoreVal + " ";
+
+              tagRef.once("value", tv=>{
+                let equipped = tv.val();
+                let tagToShow = equipped || this.getDefaultTag(scoreVal);
+                tagSpan.textContent = tagToShow ? "["+tagToShow+"]" : "";
+              });
             });
 
             up.onclick=()=>this.vote(d.name,1);
@@ -230,7 +391,7 @@ window.onload = function(){
               msg.classList.add("system-msg");
             }
 
-            row.append(name,scoreSpan,up,down,msg);
+            row.append(name,scoreSpan,up,down,tagSpan,msg);
             box.append(row);
           });
 
@@ -240,13 +401,8 @@ window.onload = function(){
 
     vote(target,delta){
       let voter=this.get_name();
-      let room = localStorage.getItem("room");
+      let room = localStorage.getItem("room") || "General";
       let now=Date.now();
-
-      if(!room){
-        this.showBanner("No room selected.");
-        return;
-      }
 
       let ref=db.ref("rooms/"+room+"/votes/"+target+"/"+voter);
 
@@ -279,8 +435,8 @@ window.onload = function(){
 
   let app=new SOCIAL_CREDIT();
   if(app.get_name()){
-    if(localStorage.getItem("room")) app.chat();
-    else app.rooms();
+    if(!localStorage.getItem("room")) localStorage.setItem("room","General");
+    app.chat();
   } else {
     app.home();
   }
