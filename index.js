@@ -1,4 +1,4 @@
-window.onload = function(){
+window.onload = function() {
 
   var firebaseConfig = {
     apiKey: "AIzaSyB5Ok9DqaliIqSTM0EZmXFJSZWWOjCX0aU",
@@ -14,151 +14,177 @@ window.onload = function(){
 
   class SOCIAL_CREDIT {
 
-    home(){
-      document.body.innerHTML="";
+    home() {
+      document.body.innerHTML = "";
       this.title();
       this.join();
     }
 
-    title(){
-      let t=document.createElement("div");
-      t.id="title_container";
-      let h=document.createElement("h1");
-      h.id="title";
-      h.textContent="Social Credit – the new kind of social media!";
+    title() {
+      let t = document.createElement("div");
+      t.id = "title_container";
+      let h = document.createElement("h1");
+      h.id = "title";
+      h.textContent = "Social Credit – the new kind of social media!";
       t.append(h);
       document.body.append(t);
     }
 
-    join(){
-      let c=document.createElement("div");
-      c.id="join_container";
-      let i=document.createElement("input");
-      i.placeholder="Enter username";
-      let b=document.createElement("button");
-      b.textContent="Join";
+    join() {
+      let c = document.createElement("div");
+      c.id = "join_container";
 
-      b.onclick=()=>{
-        if(i.value.length>0){
-          localStorage.setItem("name",i.value);
+      let i = document.createElement("input");
+      i.placeholder = "Enter username";
+      i.id = "join_input";
+
+      let b = document.createElement("button");
+      b.textContent = "Join";
+      b.id = "join_button";
+
+      b.onclick = () => {
+        if (i.value.length > 0) {
+          localStorage.setItem("name", i.value);
           this.chat();
         }
       };
 
-      let w=document.createElement("div");
-      w.id="join_inner_container";
-      w.append(i,b);
+      let w = document.createElement("div");
+      w.id = "join_inner_container";
+      w.append(i, b);
       c.append(w);
       document.body.append(c);
     }
 
-    chat(){
-      document.body.innerHTML="";
+    chat() {
+      document.body.innerHTML = "";
       this.title();
 
-      let c=document.createElement("div");
-      c.id="chat_container";
-      let inner=document.createElement("div");
-      inner.id="chat_inner_container";
+      let c = document.createElement("div");
+      c.id = "chat_container";
 
-      let box=document.createElement("div");
-      box.id="chat_content_container";
+      let inner = document.createElement("div");
+      inner.id = "chat_inner_container";
 
-      let input=document.createElement("input");
-      input.placeholder="Say something...";
+      let box = document.createElement("div");
+      box.id = "chat_content_container";
 
-      let send=document.createElement("button");
-      send.textContent="Send";
+      let input = document.createElement("input");
+      input.id = "chat_input";
+      input.placeholder = "Say something...";
 
-      send.onclick=()=>{
-        if(input.value.length>0){
+      let send = document.createElement("button");
+      send.id = "chat_input_send";
+      send.textContent = "Send";
+
+      send.onclick = () => {
+        if (input.value.length > 0) {
           db.ref("chats").push({
-            name:this.get_name(),
-            message:input.value,
-            time:Date.now()
+            name: this.get_name(),
+            message: input.value,
+            time: Date.now()
           });
-          input.value="";
+          input.value = "";
         }
       };
 
-      inner.append(box,input,send);
+      inner.append(box, input, send);
       c.append(inner);
       document.body.append(c);
 
-      this.listen();
+      this.listenMessages();
+      this.listenScores();
     }
 
-    get_name(){
+    get_name() {
       return localStorage.getItem("name");
     }
 
-    listen(){
-      let box=document.getElementById("chat_content_container");
-      db.ref("chats").orderByChild("time").on("value",snap=>{
-        box.innerHTML="";
-        snap.forEach(s=>{
-          let d=s.val();
+    listenMessages() {
+      let box = document.getElementById("chat_content_container");
 
-          let row=document.createElement("div");
-          row.className="message_container";
+      db.ref("chats").orderByChild("time").on("value", snap => {
+        box.innerHTML = "";
+        snap.forEach(s => {
+          let d = s.val();
 
-          let name=document.createElement("span");
-          name.textContent=d.name+" ";
+          let row = document.createElement("div");
+          row.className = "message_container";
 
-          let scoreSpan=document.createElement("span");
-          scoreSpan.className="score";
+          let name = document.createElement("span");
+          name.textContent = d.name + " ";
+          name.style.fontWeight = "bold";
 
-          let up=document.createElement("span");
-          up.textContent="▲";
-          up.className="vote";
+          let scoreSpan = document.createElement("span");
+          scoreSpan.className = "score";
+          scoreSpan.dataset.user = d.name;
+          scoreSpan.style.marginRight = "5px";
 
-          let down=document.createElement("span");
-          down.textContent="▼";
-          down.className="vote";
+          let up = document.createElement("button");
+          up.textContent = "▲";
+          up.className = "vote";
+          up.style.marginRight = "3px";
+          up.style.fontSize = "18px";
+          up.style.touchAction = "manipulation";
 
-          let scoreRef=db.ref("scores/"+d.name);
+          let down = document.createElement("button");
+          down.textContent = "▼";
+          down.className = "vote";
+          down.style.fontSize = "18px";
+          down.style.touchAction = "manipulation";
 
-          scoreRef.once("value",v=>{
-            if(!v.exists()) scoreRef.set({score:30});
-            scoreSpan.textContent=(v.val()?v.val().score:30)+" ";
-          });
+          up.onclick = () => this.vote(d.name, 1);
+          down.onclick = () => this.vote(d.name, -1);
 
-          up.onclick=()=>this.vote(d.name,1);
-          down.onclick=()=>this.vote(d.name,-1);
+          let msg = document.createElement("div");
+          msg.textContent = d.message;
+          msg.style.marginTop = "4px";
 
-          let msg=document.createElement("div");
-          msg.textContent=d.message;
-
-          row.append(name,scoreSpan,up,down,msg);
+          row.append(name, scoreSpan, up, down, msg);
           box.append(row);
         });
       });
     }
 
-    vote(target,delta){
-      let voter=this.get_name();
-      let now=Date.now();
-      let ref=db.ref("votes/"+target+"/"+voter);
+    listenScores() {
+      db.ref("scores").on("value", snap => {
+        snap.forEach(userSnap => {
+          let name = userSnap.key;
+          let score = userSnap.val().score;
+          document.querySelectorAll(`.score[data-user="${name}"]`).forEach(s => {
+            s.textContent = score + " ";
+          });
+        });
+      });
+    }
 
-      ref.once("value",s=>{
-        if(s.exists() && now-s.val()<3600000){
-          alert("You can only rate once per hour.");
+    vote(target, delta) {
+      let voter = this.get_name();
+      if (voter === target) return; // can't vote yourself
+
+      let now = Date.now();
+      let voteRef = db.ref(`votes/${target}/${voter}`);
+
+      voteRef.once("value", s => {
+        // 10 minutes cooldown = 600,000 ms
+        if (s.exists() && now - s.val() < 600000) {
+          alert("You can only vote on the same person every 10 minutes.");
           return;
         }
 
-        let scoreRef=db.ref("scores/"+target);
-        scoreRef.transaction(c=>{
-          if(!c) c={score:30};
-          c.score+=delta;
+        let scoreRef = db.ref(`scores/${target}`);
+        scoreRef.transaction(c => {
+          if (!c) c = { score: 30 };
+          c.score += delta;
           return c;
         });
 
-        ref.set(now);
+        voteRef.set(now); // record the last vote time
       });
     }
   }
 
-  let app=new SOCIAL_CREDIT();
-  if(app.get_name()) app.chat();
+  let app = new SOCIAL_CREDIT();
+  if (app.get_name()) app.chat();
   else app.home();
-}
+};
