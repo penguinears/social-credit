@@ -1,6 +1,6 @@
 /* ---------- BODY ---------- */
 body {
-  background-color: #D64045; /* red theme */
+  background-color: #8B0000; /* deep red for harshness */
   font-family: 'Varela Round', sans-serif;
   font-weight: 900;
   overflow-x: hidden;
@@ -11,13 +11,13 @@ body {
 /* ---------- TITLE ---------- */
 #title_container {
   width: 100%;
-  height: 180px;
+  height: 200px;
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #8B0000; /* darker red */
-  border-bottom: 4px solid #fff;
-  box-shadow: 0 0 20px -10px #8B0000;
+  background-color: #D64045; /* brighter harsh red */
+  border-bottom: 5px solid #fff;
+  box-shadow: 0 0 25px -10px #D64045;
 }
 
 #title_inner_container {
@@ -26,15 +26,17 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  border-radius: 150px;
+  border-radius: 200px;
 }
 
 #title {
-  color: #FFD700; /* gold/yellow text */
-  font-size: 48px;
-  letter-spacing: 2px;
+  font-family: 'Bungee Outline', cursive; /* OLD TITLE FONT */
+  color: #FFD700; /* harsh yellow */
+  font-size: 55px;
+  letter-spacing: 3px;
   text-align: center;
   user-select: none;
+  text-shadow: 2px 2px #1D0000; /* adds harsh contrast */
 }
 
 /* ---------- JOIN FORM ---------- */
@@ -57,7 +59,7 @@ body {
   font-size: 16px;
   font-weight: bold;
   text-align: center;
-  background-color: rgba(255,255,255,0.1);
+  background-color: #330000; /* harsh dark background */
   color: #FFD700;
   border: 2px dashed #FFD700;
   border-radius: 8px;
@@ -65,7 +67,7 @@ body {
 }
 
 #join_input:focus {
-  box-shadow: 0 0 10px #FFD700;
+  box-shadow: 0 0 12px #FFD700;
 }
 
 #join_button {
@@ -74,7 +76,7 @@ body {
   margin-top: 15px;
   font-size: 16px;
   font-weight: bold;
-  color: #D64045;
+  color: #8B0000;
   background-color: #FFD700;
   border-radius: 8px;
   cursor: pointer;
@@ -83,7 +85,7 @@ body {
 
 #join_button.enabled:hover {
   background-color: #FFC700;
-  transform: scale(1.03);
+  transform: scale(1.05);
 }
 
 /* ---------- CHAT ---------- */
@@ -101,14 +103,14 @@ body {
 
 #chat_content_container {
   width: 100%;
-  height: 400px;
+  height: 450px;
   overflow-y: auto;
   padding: 10px;
-  background-color: rgba(0,0,0,0.05);
+  background-color: #330000; /* harsh dark chat background */
   border-radius: 10px;
   margin-bottom: 10px;
   scrollbar-width: thin;
-  scrollbar-color: #FFD700 rgba(255,255,255,0.2);
+  scrollbar-color: #FFD700 #330000;
 }
 
 #chat_input_container {
@@ -125,7 +127,7 @@ body {
   border-radius: 8px 0 0 8px;
   border: none;
   outline: none;
-  background-color: rgba(255,255,255,0.1);
+  background-color: #330000;
   color: #FFD700;
 }
 
@@ -135,7 +137,7 @@ body {
   border-radius: 0 8px 8px 0;
   border: none;
   background-color: #FFD700;
-  color: #D64045;
+  color: #8B0000;
   cursor: pointer;
   font-size: 18px;
   transition: 0.3s;
@@ -151,20 +153,21 @@ body {
   display: flex;
   flex-direction: column;
   margin-bottom: 15px;
-  padding: 8px;
+  padding: 10px;
   border-radius: 8px;
-  background-color: rgba(255,255,255,0.1);
+  background-color: #4B0000; /* darker harsh red */
   transition: 0.3s;
 }
 
 .message_container:hover {
-  background-color: rgba(255,255,255,0.2);
+  background-color: #5B0000;
 }
 
 .message_user {
   font-weight: bold;
   font-size: 14px;
   color: #FFD700;
+  text-shadow: 1px 1px #1D0000;
 }
 
 .message_content {
@@ -187,14 +190,14 @@ body {
 
 .vote:hover {
   color: #fff;
-  transform: scale(1.2);
+  transform: scale(1.3);
 }
 
 /* ---------- SCORE ---------- */
 .score {
   font-weight: bold;
   color: #FFD700;
-  margin-right: 3px;
+  margin-right: 5px;
 }
 
 /* ---------- LOGOUT ---------- */
@@ -211,7 +214,7 @@ body {
 /* ---------- MOBILE ---------- */
 @media (max-width: 600px) {
   #title {
-    font-size: 36px;
+    font-size: 42px;
   }
 
   #chat_content_container {
@@ -238,7 +241,7 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255,255,255,0.1);
+  background: #330000;
 }
 
 ::-webkit-scrollbar-thumb {
