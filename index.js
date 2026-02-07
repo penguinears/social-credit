@@ -3,12 +3,13 @@
 window.onload = function() {
   // Your web app's Firebase configuration
   var firebaseConfig = {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: "",
-    appId: ""
+    apiKey: "AIzaSyB5Ok9DqaliIqSTM0EZmXFJSZWWOjCX0aU",
+    authDomain: "socialredit.firebaseapp.com",
+    projectId: "socialredit",
+    storageBucket: "socialredit.firebasestorage.app",
+    messagingSenderId: "664078097505",
+    appId: "1:664078097505:web:f9a4e3211f581d37441e20",
+  measurementId: "G-MWF82HY6T9"
   };
   // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
