@@ -1,9 +1,9 @@
 window.onload = function(){
 
   var firebaseConfig = {
-    apiKey: "REPLACE_WITH_NEW_KEY",
+    apiKey: "AIzaSyB5Ok9DqaliIqSTM0EZmXFJSZWWOjCX0aU",
     authDomain: "socialredit.firebaseapp.com",
-    databaseURL: "https://socialredit-default-rtdb.firebaseio.com",
+    databaseURL: "https://socialredit-default-rtdb.europe-west1.firebasedatabase.app",
     projectId: "socialredit",
     storageBucket: "socialredit.appspot.com",
     appId: "1:664078097505:web:f9a4e3211f581d37441e20"
@@ -12,18 +12,18 @@ window.onload = function(){
   firebase.initializeApp(firebaseConfig);
   var db = firebase.database();
 
-  class SOCIAL_CREDIT{
+  class SOCIAL_CREDIT {
 
     home(){
-      document.body.innerHTML = "";
+      document.body.innerHTML="";
       this.title();
       this.join();
     }
 
     title(){
-      let t = document.createElement("div");
+      let t=document.createElement("div");
       t.id="title_container";
-      let h = document.createElement("h1");
+      let h=document.createElement("h1");
       h.id="title";
       h.textContent="Social Credit – the new kind of social media!";
       t.append(h);
@@ -31,11 +31,11 @@ window.onload = function(){
     }
 
     join(){
-      let c = document.createElement("div");
+      let c=document.createElement("div");
       c.id="join_container";
-      let i = document.createElement("input");
+      let i=document.createElement("input");
       i.placeholder="Enter username";
-      let b = document.createElement("button");
+      let b=document.createElement("button");
       b.textContent="Join";
 
       b.onclick=()=>{
@@ -45,10 +45,10 @@ window.onload = function(){
         }
       };
 
-      let wrap=document.createElement("div");
-      wrap.id="join_inner_container";
-      wrap.append(i,b);
-      c.append(wrap);
+      let w=document.createElement("div");
+      w.id="join_inner_container";
+      w.append(i,b);
+      c.append(w);
       document.body.append(c);
     }
 
@@ -61,16 +61,16 @@ window.onload = function(){
       let inner=document.createElement("div");
       inner.id="chat_inner_container";
 
-      let content=document.createElement("div");
-      content.id="chat_content_container";
+      let box=document.createElement("div");
+      box.id="chat_content_container";
 
       let input=document.createElement("input");
       input.placeholder="Say something...";
 
-      let btn=document.createElement("button");
-      btn.textContent="Send";
+      let send=document.createElement("button");
+      send.textContent="Send";
 
-      btn.onclick=()=>{
+      send.onclick=()=>{
         if(input.value.length>0){
           db.ref("chats").push({
             name:this.get_name(),
@@ -81,7 +81,7 @@ window.onload = function(){
         }
       };
 
-      inner.append(content,input,btn);
+      inner.append(box,input,send);
       c.append(inner);
       document.body.append(c);
 
