@@ -56,9 +56,9 @@ window.onload = function(){
 
     /* SWEAR FILTER */
     getBannedWords(){
-      // You can extend this with your own list.
+      // Extend this with racist / homophobic slurs you want blocked.
       return [
-        "cunt" // plus any racist / homophobic slurs you add yourself
+        "cunt"
       ];
     }
 
@@ -184,24 +184,49 @@ window.onload = function(){
       });
     }
 
-    /* ROOMS (INCL. USER-CREATED) */
+    /* ROOMS (BUILT-IN + USER-CREATED) */
     getRoomsRef(){
       return db.ref("rooms");
     }
 
+    getBuiltInRooms(){
+      return ["General","Conspiracy Theories","Politics","Gaming","Debate"];
+    }
+
     loadRooms(callback){
       this.getRoomsRef().once("value", snap => {
-        let rooms = [];
+        let builtIn = this.getBuiltInRooms();
+        let userRooms = [];
+
         if(snap.exists()){
           snap.forEach(child => {
-            rooms.push(child.key);
+            const name = child.key;
+            const data = child.val() || {};
+            if(builtIn.includes(name)){
+              // ensure built-ins exist with flag
+              if(data.createdByUser !== false){
+                this.getRoomsRef().child(name).update({ createdByUser: false });
+              }
+            } else {
+              userRooms.push(name);
+            }
           });
         }
-        if(rooms.length === 0){
-          rooms = ["General","Conspiracy Theories","Politics","Gaming","Debate"];
-          rooms.forEach(r => this.getRoomsRef().child(r).set({ created: Date.now() }));
-        }
-        callback(rooms);
+
+        // ensure built-ins exist
+        builtIn.forEach(r => {
+          this.getRoomsRef().child(r).once("value", s => {
+            if(!s.exists()){
+              this.getRoomsRef().child(r).set({
+                created: Date.now(),
+                createdByUser: false
+              });
+            }
+          });
+        });
+
+        const all = [...builtIn, ...userRooms];
+        callback(all);
       });
     }
 
@@ -233,6 +258,7 @@ window.onload = function(){
       roomSelect.style.fontFamily = "Varela Round, sans-serif";
 
       let createBtn = document.createElement("button");
+      createBtn.id = "create_room_button";
       createBtn.textContent = "Create Room";
       createBtn.style.marginLeft = "8px";
       createBtn.style.marginTop = "0";
@@ -329,7 +355,7 @@ window.onload = function(){
           if(snap.exists()){
             this.showBanner("Room already exists.");
           } else {
-            ref.set({ created: Date.now() }, () => {
+            ref.set({ created: Date.now(), createdByUser: true }, () => {
               localStorage.setItem("room", name);
               this.chat();
             });
@@ -340,15 +366,36 @@ window.onload = function(){
 
     setupChatControls(input, send){
       let user = this.get_name();
+
       this.getGlobalScoreRef(user).once("value", v => {
         let score = v.val() ? v.val().score : 30;
+
         if(score <= 0){
           input.disabled = true;
           send.disabled = true;
+          input.placeholder = "🔒";
+          input.style.textAlign = "center";
+          input.style.fontSize = "22px";
+
+          let createBtn = document.querySelector("#create_room_button");
+          if(createBtn){
+            createBtn.disabled = true;
+            createBtn.style.opacity = "0.5";
+          }
+
           this.showBanner("Your social credit is too low to participate.");
         } else {
           input.disabled = false;
           send.disabled = false;
+          input.placeholder = "Say something...";
+          input.style.textAlign = "left";
+          input.style.fontSize = "16px";
+
+          let createBtn = document.querySelector("#create_room_button");
+          if(createBtn){
+            createBtn.disabled = false;
+            createBtn.style.opacity = "1";
+          }
         }
       });
 
@@ -359,6 +406,7 @@ window.onload = function(){
 
         this.getGlobalScoreRef(name).once("value", v => {
           let score = v.val() ? v.val().score : 30;
+
           if(score <= 0){
             this.showBanner("Your social credit is too low to participate.");
             return;
@@ -374,13 +422,24 @@ window.onload = function(){
                 message: name + " used banned language and lost 3 social credit.",
                 time: Date.now()
               });
+
               this.showBanner("Banned language detected. -3 social credit.");
+
               if(newScore <= 0){
-                this.showBanner("Your social credit is too low to participate.");
                 input.disabled = true;
                 send.disabled = true;
+                input.placeholder = "🔒";
+                input.style.textAlign = "center";
+                input.style.fontSize = "22px";
+
+                let createBtn = document.querySelector("#create_room_button");
+                if(createBtn){
+                  createBtn.disabled = true;
+                  createBtn.style.opacity = "0.5";
+                }
               }
             });
+
             input.value = "";
             return;
           }
@@ -390,6 +449,7 @@ window.onload = function(){
             message: text,
             time: Date.now()
           });
+
           input.value = "";
         });
       };
@@ -403,7 +463,6 @@ window.onload = function(){
       let existing = document.getElementById("me_panel");
       if(existing) existing.remove();
 
-      let room = localStorage.getItem("room") || "General";
       let name = this.get_name();
       if(!name){
         this.showBanner("No username set.");
@@ -476,7 +535,10 @@ window.onload = function(){
             btn.style.fontSize = "11px";
             btn.style.marginTop = "0";
 
-            if(!isUnlocked){
+            if(score <= 0){
+              btn.textContent = "Locked";
+              btn.disabled = true;
+            } else if(!isUnlocked){
               btn.textContent = "Locked";
               btn.disabled = true;
             } else if(equipped === t.name){
