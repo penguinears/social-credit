@@ -37,4 +37,4 @@ function postAnnouncement() {
 }
 
 // Post every 30 seconds
-setInterval(postAnnouncement, 30000);
+setInterval(postAnnouncement, 999000);
