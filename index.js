@@ -1,4 +1,4 @@
-// --- MAIN CLIENT SCRIPT WITH GOOGLE AUTH ---
+// --- MAIN CLIENT SCRIPT ---
 
 window.onload = function(){
 
@@ -34,8 +34,12 @@ window.onload = function(){
     }
 
     hasUnlockedTag(score, tag){
-      if(tag.direction === "down") return score <= tag.min;
-      if(tag.direction === "up")   return score >= tag.min;
+      if(tag.direction === "down"){
+        return score <= tag.min;
+      }
+      if(tag.direction === "up"){
+        return score >= tag.min;
+      }
       return false;
     }
 
@@ -49,11 +53,9 @@ window.onload = function(){
       return unlocked[unlocked.length - 1].name;
     }
 
-    // banned words placeholder – you add your own
     getBannedWords(){
       return [
         "cunt"
-        // add your racist / homophobic slurs here privately
       ];
     }
 
@@ -64,12 +66,12 @@ window.onload = function(){
       return banned.some(w => lower.includes(w));
     }
 
-    getGlobalScoreRef(uid){
-      return db.ref("scores/" + uid);
+    getGlobalScoreRef(name){
+      return db.ref("scores/" + name);
     }
 
-    adjustScore(uid, delta, callback){
-      let ref = this.getGlobalScoreRef(uid);
+    adjustScore(name, delta, callback){
+      let ref = this.getGlobalScoreRef(name);
       ref.transaction(c => {
         if(!c) c = { score: 30 };
         c.score += delta;
@@ -82,6 +84,7 @@ window.onload = function(){
 
     showBanner(msg){
       let b = document.getElementById("banner");
+
       if(!b){
         b = document.createElement("div");
         b.id = "banner";
@@ -98,24 +101,73 @@ window.onload = function(){
       b.style.textAlign = "center";
       b.style.transition = "top 0.2s ease";
       b.style.borderBottom = "4px solid #000";
+      b.style.borderRadius = "0";
       b.style.letterSpacing = "1px";
       b.style.textTransform = "uppercase";
 
-      if(msg.includes("10 minutes")){
-        b.style.background = "#ff2222";
-        b.style.color = "#ffffff";
-      } else {
-        b.style.background = "#ffd700";
-        b.style.color = "#b30000";
-      }
+      b.style.background = "#ffd700";
+      b.style.color = "#b30000";
 
       b.textContent = msg;
+
       b.style.top = "0px";
-      setTimeout(()=>{ b.style.top = "-60px"; }, 6000);
+
+      setTimeout(()=>{
+        b.style.top = "-60px";
+      }, 6000);
     }
 
-    getBuiltInRooms(){
-      return ["General","Conspiracy Theories","Politics","Gaming","Debate"];
+    home(){
+      document.body.innerHTML="";
+      this.title();
+      this.join();
+    }
+
+    title(){
+      let t=document.createElement("div");
+      t.id="title_container";
+      let h=document.createElement("h1");
+      h.id="title";
+      h.textContent="Social Credit – the new kind of social media!";
+      t.append(h);
+      document.body.append(t);
+    }
+
+    join(){
+      document.body.innerHTML = "";
+      this.title();
+
+      let c=document.createElement("div");
+      c.id="join_container";
+      let i=document.createElement("input");
+      i.placeholder="Enter username";
+      let b=document.createElement("button");
+      b.textContent="Join";
+
+      b.onclick=()=>{
+        if(i.value.length>0){
+          localStorage.setItem("name",i.value);
+          localStorage.setItem("room","General");
+          this.ensureGlobalScore(i.value, () => this.chat());
+        }
+      };
+
+      let w=document.createElement("div");
+      w.id="join_inner_container";
+      w.append(i,b);
+      c.append(w);
+      document.body.append(c);
+    }
+
+    ensureGlobalScore(name, cb){
+      let ref = this.getGlobalScoreRef(name);
+      ref.once("value", v => {
+        if(!v.exists()){
+          ref.set({ score: 30 }, cb);
+        } else {
+          cb();
+        }
+      });
     }
 
     getRoomsRef(){
@@ -124,51 +176,24 @@ window.onload = function(){
 
     loadRooms(callback){
       this.getRoomsRef().once("value", snap => {
-        let builtIn = this.getBuiltInRooms();
-        let userRooms = [];
-
+        let rooms = [];
         if(snap.exists()){
           snap.forEach(child => {
-            const name = child.key;
-            const data = child.val() || {};
-            if(builtIn.includes(name)){
-              if(data.createdByUser !== false){
-                this.getRoomsRef().child(name).update({ createdByUser: false });
-              }
-            } else {
-              userRooms.push(name);
-            }
+            rooms.push(child.key);
           });
         }
-
-        builtIn.forEach(r => {
-          this.getRoomsRef().child(r).once("value", s => {
-            if(!s.exists()){
-              this.getRoomsRef().child(r).set({
-                created: Date.now(),
-                createdByUser: false
-              });
-            }
-          });
-        });
-
-        callback({ builtIn, userRooms });
+        if(rooms.length === 0){
+          rooms = ["General","Conspiracy Theories","Politics","Gaming","Debate"];
+          rooms.forEach(r => this.getRoomsRef().child(r).set({ created: Date.now() }));
+        }
+        callback(rooms);
       });
     }
 
-    chat(user){
-      document.body.innerHTML = "";
+    chat(){
+      document.body.innerHTML="";
+      this.title();
 
-      // title
-      let t=document.createElement("div");
-      t.id="title_container";
-      let h=document.createElement("h1");
-      h.id="title";
-      h.textContent="Social Credit – the new kind of social media!";
-      t.append(h);
-      document.body.append(t);
-
-      // controls
       let controls = document.createElement("div");
       controls.style.display = "flex";
       controls.style.justifyContent = "space-between";
@@ -178,51 +203,36 @@ window.onload = function(){
 
       let roomWrap = document.createElement("div");
       roomWrap.style.display = "flex";
-      roomWrap.style.flexDirection = "column";
-      roomWrap.style.gap = "4px";
+      roomWrap.style.alignItems = "center";
+      roomWrap.style.gap = "6px";
 
-      let officialLabel = document.createElement("div");
-      officialLabel.textContent = "Official rooms:";
-      officialLabel.style.color = "#ffd700";
-      officialLabel.style.fontSize = "13px";
+      let roomLabel = document.createElement("span");
+      roomLabel.textContent = "Room:";
+      roomLabel.style.color = "#ffd700";
 
-      let officialSelect = document.createElement("select");
-      officialSelect.style.padding = "4px";
-      officialSelect.style.background = "#8b0000";
-      officialSelect.style.color = "#ffd700";
-      officialSelect.style.border = "2px solid #ffd700";
-      officialSelect.style.fontFamily = "Varela Round, sans-serif";
-
-      let userLabel = document.createElement("div");
-      userLabel.textContent = "User‑made:";
-      userLabel.style.color = "#ffd700";
-      userLabel.style.fontSize = "13px";
-      userLabel.style.marginTop = "4px";
-
-      let userSelect = document.createElement("select");
-      userSelect.style.padding = "4px";
-      userSelect.style.background = "#8b0000";
-      userSelect.style.color = "#ffd700";
-      userSelect.style.border = "2px solid #ffd700";
-      userSelect.style.fontFamily = "Varela Round, sans-serif";
+      let roomSelect = document.createElement("select");
+      roomSelect.style.padding = "6px";
+      roomSelect.style.background = "#8b0000";
+      roomSelect.style.color = "#ffd700";
+      roomSelect.style.border = "2px solid #ffd700";
+      roomSelect.style.fontFamily = "Varela Round, sans-serif";
 
       let createBtn = document.createElement("button");
-      createBtn.id = "create_room_button";
       createBtn.textContent = "Create Room";
-      createBtn.style.marginTop = "4px";
+      createBtn.style.marginLeft = "8px";
+      createBtn.style.marginTop = "0";
 
-      roomWrap.append(officialLabel, officialSelect, userLabel, userSelect, createBtn);
+      roomWrap.append(roomLabel, roomSelect, createBtn);
 
       let meBtn = document.createElement("button");
       meBtn.textContent = "ME";
       meBtn.style.width = "80px";
       meBtn.style.marginTop = "0";
-      meBtn.onclick = () => this.showMePanel(user);
+      meBtn.onclick = () => this.showMePanel();
 
       controls.append(roomWrap, meBtn);
       document.body.append(controls);
 
-      // chat area
       let c=document.createElement("div");
       c.id="chat_container";
       let inner=document.createElement("div");
@@ -241,43 +251,30 @@ window.onload = function(){
       c.append(inner);
       document.body.append(c);
 
-      this.loadRooms(({ builtIn, userRooms }) => {
+      this.loadRooms(rooms => {
         let currentRoom = localStorage.getItem("room") || "General";
-
-        officialSelect.innerHTML = "";
-        builtIn.forEach(r => {
+        roomSelect.innerHTML = "";
+        rooms.forEach(r=>{
           let opt = document.createElement("option");
           opt.value = r;
           opt.textContent = r;
           if(r === currentRoom) opt.selected = true;
-          officialSelect.append(opt);
+          roomSelect.append(opt);
         });
 
-        userSelect.innerHTML = "";
-        userRooms.forEach(r => {
-          let opt = document.createElement("option");
-          opt.value = r;
-          opt.textContent = r;
-          if(r === currentRoom) opt.selected = true;
-          userSelect.append(opt);
-        });
-
-        const setRoom = (roomName) => {
-          localStorage.setItem("room", roomName);
-          this.listen(user);
+        roomSelect.onchange = () => {
+          localStorage.setItem("room", roomSelect.value);
+          this.chat();
         };
 
-        officialSelect.onchange = () => setRoom(officialSelect.value);
-        userSelect.onchange     = () => setRoom(userSelect.value);
+        createBtn.onclick = () => this.createRoomPrompt();
 
-        createBtn.onclick = () => this.createRoomPrompt(user);
-
-        this.setupChatControls(user, input, send);
-        this.listen(user);
+        this.setupChatControls(input, send);
+        this.listen();
       });
     }
 
-    createRoomPrompt(user){
+    createRoomPrompt(){
       let name = prompt("Enter new room name:");
       if(!name) return;
 
@@ -286,17 +283,14 @@ window.onload = function(){
         this.showBanner("Room name too short.");
         return;
       }
-      if(name.length > 25){
-        this.showBanner("Room name too long (max 25).");
-        return;
-      }
 
       if(this.containsBannedWord(name)){
+        let user = this.get_name();
         let room = localStorage.getItem("room") || "General";
-        this.adjustScore(user.uid, -3, newScore => {
+        this.adjustScore(user, -3, newScore => {
           db.ref("rooms/"+room+"/chats").push({
             name: "SYSTEM",
-            message: user.displayName + " tried to create a bad room name and lost 3 social credit.",
+            message: user + " tried to create a bad room name and lost 3 social credit.",
             time: Date.now()
           });
           this.showBanner("Room name not allowed. -3 social credit.");
@@ -304,7 +298,8 @@ window.onload = function(){
         return;
       }
 
-      this.getGlobalScoreRef(user.uid).once("value", v => {
+      let user = this.get_name();
+      this.getGlobalScoreRef(user).once("value", v => {
         let score = v.val() ? v.val().score : 30;
         if(score <= 0){
           this.showBanner("Your social credit is too low to create rooms.");
@@ -316,109 +311,63 @@ window.onload = function(){
           if(snap.exists()){
             this.showBanner("Room already exists.");
           } else {
-            ref.set({ created: Date.now(), createdByUser: true }, () => {
+            ref.set({ created: Date.now() }, () => {
               localStorage.setItem("room", name);
-              this.chat(user);
+              this.chat();
             });
           }
         });
       });
     }
 
-    setupChatControls(user, input, send){
-      this.getGlobalScoreRef(user.uid).once("value", v => {
-        let score = v.val() ? v.val().score : 30;
-
-        if(score <= 0){
-          input.disabled = true;
-          send.disabled = true;
-          input.placeholder = "🔒";
-          input.style.textAlign = "center";
-          input.style.fontSize = "22px";
-
-          let createBtn = document.querySelector("#create_room_button");
-          if(createBtn){
-            createBtn.disabled = true;
-            createBtn.style.opacity = "0.5";
-          }
-
-          this.showBanner("Your social credit is too low to participate.");
-        } else {
-          input.disabled = false;
-          send.disabled = false;
-          input.placeholder = "Say something...";
-          input.style.textAlign = "left";
-          input.style.fontSize = "16px";
-
-          let createBtn = document.querySelector("#create_room_button");
-          if(createBtn){
-            createBtn.disabled = false;
-            createBtn.style.opacity = "1";
-          }
-        }
-      });
-
+    setupChatControls(input, send){
       send.onclick = () => {
         let room = localStorage.getItem("room") || "General";
+        let name = this.get_name();
+        if(!name) return;
 
-        this.getGlobalScoreRef(user.uid).once("value", v => {
+        this.getGlobalScoreRef(name).once("value", v => {
           let score = v.val() ? v.val().score : 30;
-          if(score <= 0){
-            this.showBanner("Your social credit is too low to participate.");
-            return;
-          }
 
           let text = input.value.trim();
           if(text.length === 0) return;
-          if(text.length > 300){
-            this.showBanner("Message too long (max 300).");
-            return;
-          }
 
           if(this.containsBannedWord(text)){
-            this.adjustScore(user.uid, -3, newScore => {
+            this.adjustScore(name, -3, newScore => {
               db.ref("rooms/"+room+"/chats").push({
                 name: "SYSTEM",
-                message: user.displayName + " used banned language and lost 3 social credit.",
+                message: name + " used banned language and lost 3 social credit.",
                 time: Date.now()
               });
-
               this.showBanner("Banned language detected. -3 social credit.");
-
-              if(newScore <= 0){
-                input.disabled = true;
-                send.disabled = true;
-                input.placeholder = "🔒";
-                input.style.textAlign = "center";
-                input.style.fontSize = "22px";
-
-                let createBtn = document.querySelector("#create_room_button");
-                if(createBtn){
-                  createBtn.disabled = true;
-                  createBtn.style.opacity = "0.5";
-                }
-              }
             });
-
             input.value = "";
             return;
           }
 
           db.ref("rooms/"+room+"/chats").push({
-            name: user.displayName,
-            uid: user.uid,
+            name: name,
             message: text,
             time: Date.now()
           });
-
           input.value = "";
         });
       };
     }
 
-    showMePanel(user){
+    get_name(){
+      return localStorage.getItem("name");
+    }
+
+    showMePanel(){
       let existing = document.getElementById("me_panel");
       if(existing) existing.remove();
+
+      let name = this.get_name();
+      if(!name){
+        this.showBanner("No username set.");
+        return;
+      }
 
       let panel = document.createElement("div");
       panel.id = "me_panel";
@@ -427,7 +376,7 @@ window.onload = function(){
       panel.style.right = "10px";
       panel.style.width = "260px";
       panel.style.background = "#330000";
-      panel.style.border = "3px solid "#ffd700";
+      panel.style.border = "3px solid #ffd700";
       panel.style.padding = "10px";
       panel.style.color = "#ffd700";
       panel.style.fontFamily = "Varela Round, sans-serif";
@@ -454,8 +403,8 @@ window.onload = function(){
       panel.append(title, close, list);
       document.body.append(panel);
 
-      let scoreRef = this.getGlobalScoreRef(user.uid);
-      let tagRef   = db.ref("tags/"+user.uid);
+      let scoreRef = this.getGlobalScoreRef(name);
+      let tagRef   = db.ref("tags/"+name);
 
       scoreRef.once("value", v=>{
         let score = v.val() ? v.val().score : 30;
@@ -486,10 +435,7 @@ window.onload = function(){
             btn.style.fontSize = "11px";
             btn.style.marginTop = "0";
 
-            if(score <= 0){
-              btn.textContent = "Locked";
-              btn.disabled = true;
-            } else if(!isUnlocked){
+            if(!isUnlocked){
               btn.textContent = "Locked";
               btn.disabled = true;
             } else if(equipped === t.name){
@@ -515,10 +461,9 @@ window.onload = function(){
       });
     }
 
-    listen(user){
+    listen(){
       let room = localStorage.getItem("room") || "General";
       let box=document.getElementById("chat_content_container");
-      if(!box) return;
 
       db.ref("rooms/"+room+"/chats")
         .orderByChild("time")
@@ -559,28 +504,22 @@ window.onload = function(){
               scoreSpan.style.display = "none";
               tagSpan.style.display = "none";
             } else {
-              let uid = d.uid;
-              if(!uid){
-                up.style.display = "none";
-                down.style.display = "none";
-              } else {
-                let scoreRef = this.getGlobalScoreRef(uid);
-                let tagRef   = db.ref("tags/"+uid);
+              let scoreRef = this.getGlobalScoreRef(d.name);
+              let tagRef   = db.ref("tags/"+d.name);
 
-                scoreRef.once("value", v=>{
-                  let scoreVal = v.val() ? v.val().score : 30;
-                  scoreSpan.textContent = scoreVal + " ";
+              scoreRef.once("value", v=>{
+                let scoreVal = v.val() ? v.val().score : 30;
+                scoreSpan.textContent = scoreVal + " ";
 
-                  tagRef.once("value", tv=>{
-                    let equipped = tv.val();
-                    let tagToShow = equipped || this.getDefaultTag(scoreVal);
-                    tagSpan.textContent = tagToShow ? "["+tagToShow+"]" : "";
-                  });
+                tagRef.once("value", tv=>{
+                  let equipped = tv.val();
+                  let tagToShow = equipped || this.getDefaultTag(scoreVal);
+                  tagSpan.textContent = tagToShow ? "["+tagToShow+"]" : "";
                 });
+              });
 
-                up.onclick   = ()=>this.vote(user, uid, 1);
-                down.onclick = ()=>this.vote(user, uid, -1);
-              }
+              up.onclick=()=>this.vote(d.name,1);
+              down.onclick=()=>this.vote(d.name,-1);
             }
 
             row.append(nameSpan,scoreSpan,up,down,tagSpan,msg);
@@ -591,64 +530,12 @@ window.onload = function(){
         });
     }
 
-    vote(voterUser, targetUid, delta){
+    vote(target,delta){
+      let voter=this.get_name();
       let room = localStorage.getItem("room") || "General";
       let now=Date.now();
 
-      if(!voterUser || voterUser.uid === targetUid) return;
+      if(!voter || voter === target) return;
 
-      this.getGlobalScoreRef(voterUser.uid).once("value", v => {
-        let voterScore = v.val() ? v.val().score : 30;
-        if(voterScore <= 0){
-          this.showBanner("Your social credit is too low to participate.");
-          return;
-        }
-
-        let ref=db.ref("votes/"+targetUid+"/"+voterUser.uid);
-
-        ref.once("value",s=>{
-          if(s.exists() && now - s.val() < 600000){
-            this.showBanner("You can only vote every 10 minutes.");
-            return;
-          }
-
-          this.adjustScore(targetUid, delta, () => {});
-          ref.set(now);
-
-          db.ref("rooms/"+room+"/chats").push({
-            name:"SYSTEM",
-            message: voterUser.displayName + " voted " + (delta > 0 ? "up" : "down"),
-            time:Date.now()
-          });
-
-          this.showBanner("Vote recorded!");
-        });
-      });
-    }
-  }
-
-  const app = new SOCIAL_CREDIT();
-
-  firebase.auth().onAuthStateChanged(user => {
-    if(user){
-      // ensure score exists
-      app.getGlobalScoreRef(user.uid).once("value", v => {
-        if(!v.exists()){
-          app.getGlobalScoreRef(user.uid).set({ score: 30 });
-        }
-        if(!localStorage.getItem("room")) localStorage.setItem("room","General");
-        app.chat(user);
-      });
-    } else {
-      // show simple sign‑in prompt
-      document.body.innerHTML = "";
-      let btn = document.createElement("button");
-      btn.textContent = "Sign in with Google";
-      btn.onclick = () => {
-        const provider = new firebase.auth.GoogleAuthProvider();
-        firebase.auth().signInWithPopup(provider);
-      };
-      document.body.append(btn);
-    }
-  });
-};
+      this.getGlobalScoreRef(voter).once("value", v => {
+        let voterScore = v.val() ? v.val
