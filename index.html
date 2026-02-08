@@ -7,7 +7,7 @@
     body {
       background: #550000;
       color: #ffd700;
-      font-family: "Varela Round", sans-serif;
+      font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
     }
@@ -20,6 +20,8 @@
     #title {
       font-size: 28px;
       color: #ffd700;
+      font-weight: bold;
+      text-transform: uppercase;
     }
 
     #join_container, #chat_container {
@@ -28,7 +30,7 @@
       background: #330000;
       padding: 20px;
       border: 3px solid #ffd700;
-      border-radius: 10px;
+      /* NO rounded corners */
     }
 
     #join_inner_container {
@@ -43,7 +45,7 @@
       background: #550000;
       color: #ffd700;
       font-size: 16px;
-      border-radius: 6px;
+      /* NO border-radius */
     }
 
     button {
@@ -53,7 +55,7 @@
       border: none;
       font-weight: bold;
       cursor: pointer;
-      border-radius: 6px;
+      /* NO border-radius */
     }
 
     #chat_inner_container {
@@ -68,20 +70,21 @@
       background: #220000;
       padding: 10px;
       border: 2px solid #ffd700;
-      border-radius: 6px;
+      /* NO border-radius */
     }
 
     .message_container {
       margin-bottom: 10px;
       padding: 6px;
       background: #440000;
-      border-radius: 6px;
+      /* NO border-radius */
     }
 
     .vote {
       cursor: pointer;
       margin: 0 4px;
       color: #ffd700;
+      font-weight: bold;
     }
 
     .tag {
@@ -90,15 +93,18 @@
     }
 
     #banner {
-      animation: shake 0.3s;
-    }
-
-    @keyframes shake {
-      0% { transform: translateX(0); }
-      25% { transform: translateX(-5px); }
-      50% { transform: translateX(5px); }
-      75% { transform: translateX(-5px); }
-      100% { transform: translateX(0); }
+      position: fixed;
+      top: -60px;
+      left: 0;
+      width: 100%;
+      padding: 15px;
+      background: #ffd700;
+      color: #550000;
+      font-weight: bold;
+      text-align: center;
+      border-bottom: 4px solid #000;
+      text-transform: uppercase;
+      transition: top 0.2s ease;
     }
   </style>
 </head>
