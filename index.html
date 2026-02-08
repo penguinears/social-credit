@@ -1,22 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Social Credit – the new kind of social media!</title>
+  <meta charset="UTF-8">
+  <title>Social Credit</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link href="https://fonts.googleapis.com/css2?family=Bungee+Outline&family=Varela+Round&display=swap" rel="stylesheet">
-
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
-<link rel="stylesheet" href="index.css">
-<script defer src="index.js"></script>
+  <!-- Optional: your CSS -->
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+  <!-- Root content is fully controlled by index.js -->
+  <div id="app_root"></div>
 
-<!-- NEW BANNER -->
-<div id="banner">Banner</div>
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
+  <!-- Optional: analytics / other SDKs if you use them -->
+  <!-- <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-analytics.js"></script> -->
+
+  <script>
+    // Same config as in index.js (kept here so auth works early if needed)
+    var firebaseConfig = {
+      apiKey: "AIzaSyB5Ok9DqaliIqSTM0EZmXFJSZWWOjCX0aU",
+      authDomain: "socialredit.firebaseapp.com",
+      databaseURL: "https://socialredit-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "socialredit",
+      storageBucket: "socialredit.appspot.com",
+      appId: "1:664078097505:web:f9a4e3211f581d37441e20"
+    };
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+
+    // Simple global sign-in helper (used before index.js takes over)
+    function signInWithGoogle() {
+      var provider = new firebase.auth.GoogleAuthProvider();
+      firebase.auth().signInWithPopup(provider).catch(function(error) {
+        console.error("Sign-in error:", error);
+      });
+    }
+  </script>
+
+  <!-- Fallback UI before index.js renders its own stuff -->
+  <script>
+    // Very simple initial UI: index.js will overwrite body once auth state is known
+    document.addEventListener("DOMContentLoaded", function () {
+      var root = document.getElementById("app_root");
+      root.style.display = "flex";
+      root.style.justifyContent = "center";
+      root.style.alignItems = "center";
+      root.style.height = "100vh";
+      root.style.flexDirection = "column";
+      root.style.gap = "10px";
+
+      var title = document.createElement("h1");
+      title.textContent = "Social Credit";
+      root.appendChild(title);
+
+      var btn = document.createElement("button");
+      btn.textContent = "Sign in with Google";
+      btn.onclick = signInWithGoogle;
+      root.appendChild(btn);
+    });
+  </script>
+
+  <!-- Your main logic -->
+  <script src="index.js"></script>
 </body>
 </html>
