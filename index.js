@@ -538,4 +538,40 @@ window.onload = function(){
       if(!voter || voter === target) return;
 
       this.getGlobalScoreRef(voter).once("value", v => {
-        let voterScore = v.val() ? v.val
+        let voterScore = v.val() ? v.val().score : 30;
+
+        let ref=db.ref("votes/"+target+"/"+voter);
+
+        ref.once("value",s=>{
+
+          if(s.exists() && now - s.val() < 600000){
+            this.showBanner("You can only vote every 10 minutes.");
+            return;
+          }
+
+          this.adjustScore(target, delta, () => {});
+
+          ref.set(now);
+
+          db.ref("rooms/"+room+"/chats").push({
+            name:"SYSTEM",
+            message: voter + " voted " + target + (delta > 0 ? " ↑" : " ↓"),
+            time:Date.now()
+          });
+
+          this.showBanner("Vote recorded!");
+        });
+      });
+    }
+  }
+
+  let app=new SOCIAL_CREDIT();
+  if(app.get_name()){
+    app.ensureGlobalScore(app.get_name(), () => {
+      if(!localStorage.getItem("room")) localStorage.setItem("room","General");
+      app.chat();
+    });
+  } else {
+    app.home();
+  }
+};
