@@ -18,6 +18,7 @@ window.onload = function(){
 
   class SOCIAL_CREDIT {
 
+    /* TAG DEFINITIONS (GLOBAL SCORE) */
     getAllTags(){
       return [
         { name: "Untrusty",        min: 15, direction: "down" },
@@ -53,7 +54,9 @@ window.onload = function(){
       return unlocked[unlocked.length - 1].name;
     }
 
+    /* SWEAR FILTER */
     getBannedWords(){
+      // Extend this with racist / homophobic slurs you want blocked.
       return [
         "cunt"
       ];
@@ -66,6 +69,7 @@ window.onload = function(){
       return banned.some(w => lower.includes(w));
     }
 
+    /* GLOBAL SCORE HELPERS */
     getGlobalScoreRef(name){
       return db.ref("scores/" + name);
     }
@@ -82,6 +86,7 @@ window.onload = function(){
       });
     }
 
+    /* BANNER SYSTEM */
     showBanner(msg){
       let b = document.getElementById("banner");
 
@@ -105,10 +110,19 @@ window.onload = function(){
       b.style.letterSpacing = "1px";
       b.style.textTransform = "uppercase";
 
-      b.style.background = "#ffd700";
-      b.style.color = "#b30000";
+      if(msg.includes("10 minutes")){
+        b.style.background = "#ff2222";
+        b.style.color = "#ffffff";
+      } else {
+        b.style.background = "#ffd700";
+        b.style.color = "#b30000";
+      }
 
       b.textContent = msg;
+
+      b.classList.remove("shake");
+      void b.offsetWidth;
+      b.classList.add("shake");
 
       b.style.top = "0px";
 
@@ -170,23 +184,49 @@ window.onload = function(){
       });
     }
 
+    /* ROOMS (BUILT-IN + USER-CREATED) */
     getRoomsRef(){
       return db.ref("rooms");
     }
 
+    getBuiltInRooms(){
+      return ["General","Conspiracy Theories","Politics","Gaming","Debate"];
+    }
+
     loadRooms(callback){
       this.getRoomsRef().once("value", snap => {
-        let rooms = [];
+        let builtIn = this.getBuiltInRooms();
+        let userRooms = [];
+
         if(snap.exists()){
           snap.forEach(child => {
-            rooms.push(child.key);
+            const name = child.key;
+            const data = child.val() || {};
+            if(builtIn.includes(name)){
+              // ensure built-ins exist with flag
+              if(data.createdByUser !== false){
+                this.getRoomsRef().child(name).update({ createdByUser: false });
+              }
+            } else {
+              userRooms.push(name);
+            }
           });
         }
-        if(rooms.length === 0){
-          rooms = ["General","Conspiracy Theories","Politics","Gaming","Debate"];
-          rooms.forEach(r => this.getRoomsRef().child(r).set({ created: Date.now() }));
-        }
-        callback(rooms);
+
+        // ensure built-ins exist
+        builtIn.forEach(r => {
+          this.getRoomsRef().child(r).once("value", s => {
+            if(!s.exists()){
+              this.getRoomsRef().child(r).set({
+                created: Date.now(),
+                createdByUser: false
+              });
+            }
+          });
+        });
+
+        const all = [...builtIn, ...userRooms];
+        callback(all);
       });
     }
 
@@ -218,6 +258,7 @@ window.onload = function(){
       roomSelect.style.fontFamily = "Varela Round, sans-serif";
 
       let createBtn = document.createElement("button");
+      createBtn.id = "create_room_button";
       createBtn.textContent = "Create Room";
       createBtn.style.marginLeft = "8px";
       createBtn.style.marginTop = "0";
@@ -294,6 +335,9 @@ window.onload = function(){
             time: Date.now()
           });
           this.showBanner("Room name not allowed. -3 social credit.");
+          if(newScore <= 0){
+            this.showBanner("Your social credit is too low to participate.");
+          }
         });
         return;
       }
@@ -311,7 +355,7 @@ window.onload = function(){
           if(snap.exists()){
             this.showBanner("Room already exists.");
           } else {
-            ref.set({ created: Date.now() }, () => {
+            ref.set({ created: Date.now(), createdByUser: true }, () => {
               localStorage.setItem("room", name);
               this.chat();
             });
@@ -321,6 +365,40 @@ window.onload = function(){
     }
 
     setupChatControls(input, send){
+      let user = this.get_name();
+
+      this.getGlobalScoreRef(user).once("value", v => {
+        let score = v.val() ? v.val().score : 30;
+
+        if(score <= 0){
+          input.disabled = true;
+          send.disabled = true;
+          input.placeholder = "🔒";
+          input.style.textAlign = "center";
+          input.style.fontSize = "22px";
+
+          let createBtn = document.querySelector("#create_room_button");
+          if(createBtn){
+            createBtn.disabled = true;
+            createBtn.style.opacity = "0.5";
+          }
+
+          this.showBanner("Your social credit is too low to participate.");
+        } else {
+          input.disabled = false;
+          send.disabled = false;
+          input.placeholder = "Say something...";
+          input.style.textAlign = "left";
+          input.style.fontSize = "16px";
+
+          let createBtn = document.querySelector("#create_room_button");
+          if(createBtn){
+            createBtn.disabled = false;
+            createBtn.style.opacity = "1";
+          }
+        }
+      });
+
       send.onclick = () => {
         let room = localStorage.getItem("room") || "General";
         let name = this.get_name();
@@ -328,6 +406,11 @@ window.onload = function(){
 
         this.getGlobalScoreRef(name).once("value", v => {
           let score = v.val() ? v.val().score : 30;
+
+          if(score <= 0){
+            this.showBanner("Your social credit is too low to participate.");
+            return;
+          }
 
           let text = input.value.trim();
           if(text.length === 0) return;
@@ -339,8 +422,24 @@ window.onload = function(){
                 message: name + " used banned language and lost 3 social credit.",
                 time: Date.now()
               });
+
               this.showBanner("Banned language detected. -3 social credit.");
+
+              if(newScore <= 0){
+                input.disabled = true;
+                send.disabled = true;
+                input.placeholder = "🔒";
+                input.style.textAlign = "center";
+                input.style.fontSize = "22px";
+
+                let createBtn = document.querySelector("#create_room_button");
+                if(createBtn){
+                  createBtn.disabled = true;
+                  createBtn.style.opacity = "0.5";
+                }
+              }
             });
+
             input.value = "";
             return;
           }
@@ -350,6 +449,7 @@ window.onload = function(){
             message: text,
             time: Date.now()
           });
+
           input.value = "";
         });
       };
@@ -435,7 +535,10 @@ window.onload = function(){
             btn.style.fontSize = "11px";
             btn.style.marginTop = "0";
 
-            if(!isUnlocked){
+            if(score <= 0){
+              btn.textContent = "Locked";
+              btn.disabled = true;
+            } else if(!isUnlocked){
               btn.textContent = "Locked";
               btn.disabled = true;
             } else if(equipped === t.name){
@@ -499,6 +602,8 @@ window.onload = function(){
             msg.textContent=d.message;
 
             if(d.name === "SYSTEM"){
+              nameSpan.classList.add("system-name");
+              msg.classList.add("system-msg");
               up.style.display = "none";
               down.style.display = "none";
               scoreSpan.style.display = "none";
@@ -539,6 +644,10 @@ window.onload = function(){
 
       this.getGlobalScoreRef(voter).once("value", v => {
         let voterScore = v.val() ? v.val().score : 30;
+        if(voterScore <= 0){
+          this.showBanner("Your social credit is too low to participate.");
+          return;
+        }
 
         let ref=db.ref("votes/"+target+"/"+voter);
 
